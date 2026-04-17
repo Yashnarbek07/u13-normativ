@@ -1,0 +1,23 @@
+{%extends 'base.html'%}
+
+{%block title%}
+    detail
+{%endblock%}
+
+
+
+{%block main%}
+<h1>Book list</h1>
+<div class="books" style="width: 300px; border: 1px solid #ddd; padding: 20px; margin: 20px;">
+        <h2>{{book.title}}</h2>
+        <p>{{book.description}}</p>
+        <p>{{book.created_at}}</p>
+        <p>{{book.created_at}}</p>
+
+        <a href="{%url 'book_list'%}">
+            <button>orqaga</button>
+        </a>
+    </div>
+
+{%endblock%}
+
