@@ -1,0 +1,189 @@
+from django.shortcuts import redirect
+
+
+def login_required_custom(func):
+    def wrapper(request, *args, **kwargs):
+        if request.user.is_authenticated:
+            return func(request, *args, **kwargs)
+        return redirect('login')
+
+    return wrapper
+
+
+from django.shortcuts import render, redirect
+from accounts.utils import login_required_custom
+from .models import Books
+from .forms import BookForm
+
+
+def book_list(request):
+    books = Books.objects.all()
+    return render(request, 'books/book_list.html', {'books': books})
+
+
+def book_detail(request, pk):
+    book = Books.objects.filter(id=pk).first()
+    return render(request, 'books/book_detail.html', {'book': book})
+
+
+@login_required_custom
+def book_create(request):
+    form = BookForm()
+
+    if request.method == 'POST':
+        form = BookForm(request.POST)
+
+        if form.is_valid():
+            form.save()
+            return redirect('book_list')
+
+    return render(request, 'books/book_create.html', {'form': form})
+
+
+@login_required_custom
+def book_update(request, pk):
+    book = Books.objects.filter(id=pk).first()
+    form = BookForm(instance=book)
+
+    if request.method == 'POST':
+        form = BookForm(request.POST, instance=book)
+
+        if form.is_valid():
+            form.save()
+            return redirect('book_list')
+
+    return render(request, 'books/book_update.html', {'form': form})
+
+
+@login_required_custom
+def book_delete(request, pk):
+    Books.objects.filter(id=pk).delete()
+    return redirect('book_list')
+
+
+
+from django.shortcuts import render, redirect
+from django.contrib.auth import login, logout
+from .forms import RegisterForm, LoginForm
+
+
+def register_view(request):
+    form = RegisterForm()
+
+    if request.method == 'POST':
+        form = RegisterForm(request.POST)
+
+        if form.is_valid():
+            user = form.save(commit=False)
+            user.set_password(form.cleaned_data['password'])
+            user.save()
+            return redirect('login')
+
+    return render(request, 'accounts/register.html', {'form': form})
+
+
+def login_view(request):
+    form = LoginForm()
+
+    if request.method == 'POST':
+        form = LoginForm(request.POST)
+
+        if form.is_valid():
+            user = form.cleaned_data['user']
+            login(request, user)
+            return redirect('book_list')
+
+    return render(request, 'accounts/login.html', {'form': form})
+
+
+def logout_view(request):
+    logout(request)
+    return redirect('login')
+
+
+from django.urls import path
+from . import views
+
+urlpatterns = [
+    path('', views.book_list, name='book_list'),
+    path('book/<int:pk>/', views.book_detail, name='book_detail'),
+    path('book/create/', views.book_create, name='book_create'),
+    path('book/update/<int:pk>/', views.book_update, name='book_update'),
+    path('book/delete/<int:pk>/', views.book_delete, name='book_delete'),
+]
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Django Normativ</title>
+</head>
+<body>
+
+<nav>
+    <a href="{% url 'book_list' %}">Home</a>
+
+    {% if request.user.is_authenticated %}
+        <a href="{% url 'logout' %}">Logout</a>
+    {% else %}
+        <a href="{% url 'login' %}">Login</a>
+        <a href="{% url 'register' %}">Register</a>
+    {% endif %}
+</nav>
+
+<hr>
+
+{% block content %}
+{% endblock %}
+
+</body>
+</html>
+
+{% extends 'base.html' %}
+
+{% block content %}
+
+<h1>Books</h1>
+
+{% if request.user.is_authenticated %}
+    <a href="{% url 'book_create' %}">
+        <button>Create</button>
+    </a>
+{% endif %}
+
+<ul>
+    {% for book in books %}
+        <li>
+            {{ book.title }}
+
+            <a href="{% url 'book_detail' book.id %}">
+                <button>Detail</button>
+            </a>
+
+            {% if request.user.is_authenticated %}
+                <a href="{% url 'book_update' book.id %}">
+                    <button>Update</button>
+                </a>
+
+                <a href="{% url 'book_delete' book.id %}">
+                    <button>Delete</button>
+                </a>
+            {% endif %}
+        </li>
+    {% endfor %}
+</ul>
+
+{% endblock %}
+
+{% extends 'base.html' %}
+
+{% block content %}
+
+<h1>{{ book.title }}</h1>
+
+<p>{{ book.description }}</p>
+<p>{{ book.price }}</p>
+
+<a href="{% url 'book_list' %}">Back</a>
+
+{% endblock %}
+
